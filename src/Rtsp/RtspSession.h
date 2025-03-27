@@ -214,6 +214,7 @@ private:
     // 消耗的总流量  [AUTO-TRANSLATED:45ad2785]
     // Total traffic consumed
     uint64_t _bytes_usage = 0;
+    uint64_t _last_bytes_usage = 0; // 上一次的总流量  [AUTO-TRANSLATED:78321785]
     //ContentBase
     std::string _content_base;
     // 记录是否需要rtsp专属鉴权，防止重复触发事件  [AUTO-TRANSLATED:9cff90b9]
