@@ -117,15 +117,17 @@ void RtspSession::onManager() {
 void RtspSession::onRecv(const Buffer::Ptr &buf) {
     _alive_ticker.resetTime();
     _bytes_usage += buf->size();
-    if ((_bytes_usage - _last_bytes_usage) >= 5242880) {
-        _last_bytes_usage = _bytes_usage;
-        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, 0, !_push_src_ownership, *this);
-    }
     if (_on_recv) {
         //http poster的请求数据转发给http getter处理
         _on_recv(buf);
     } else {
         input(buf->data(), buf->size());
+    }
+    if ((_bytes_usage - _last_bytes_usage) >= 5242880) {
+        bool is_player = !_push_src_ownership;
+        uint64_t duration = _alive_ticker.createdTime() / 1000;
+        _last_bytes_usage = _bytes_usage;
+        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, duration, is_player, *this);
     }
 }
 
