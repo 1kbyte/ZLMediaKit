@@ -77,8 +77,7 @@ void RtspSession::onError(const SockException &err) {
 
     //流量统计事件广播
     GET_CONFIG(uint32_t, iFlowThreshold, General::kFlowThreshold);
-    if ((_bytes_usage - _last_bytes_usage) >= iFlowThreshold * 1024) {
-        _last_bytes_usage = _bytes_usage;
+    if (_bytes_usage >= iFlowThreshold * 1024) {
         NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, duration, is_player, *this);
     }
 
@@ -118,6 +117,10 @@ void RtspSession::onManager() {
 void RtspSession::onRecv(const Buffer::Ptr &buf) {
     _alive_ticker.resetTime();
     _bytes_usage += buf->size();
+    if ((_bytes_usage - _last_bytes_usage) >= 5242880) {
+        _last_bytes_usage = _bytes_usage;
+        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, 0, !_push_src_ownership, *this);
+    }
     if (_on_recv) {
         //http poster的请求数据转发给http getter处理
         _on_recv(buf);
