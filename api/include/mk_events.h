@@ -242,6 +242,7 @@ typedef struct {
                                        size_t total_bytes,
                                        size_t total_seconds,
                                        int is_player,
+                                       int status,
                                        const mk_sock_info sender);
 
 

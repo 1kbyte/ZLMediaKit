@@ -34,7 +34,7 @@ void RtmpSession::onError(const SockException& err) {
     GET_CONFIG(uint32_t, iFlowThreshold, General::kFlowThreshold);
 
     if (_total_bytes >= iFlowThreshold * 1024) {
-        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _total_bytes, duration, is_player, *this);
+        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _total_bytes, duration, is_player, -1, *this);
     }
 
     //如果是主动关闭的，那么不延迟注销

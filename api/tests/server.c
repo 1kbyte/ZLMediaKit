@@ -550,10 +550,11 @@ void API_CALL on_mk_flow_report(const mk_media_info url_info,
                                 size_t total_bytes,
                                 size_t total_seconds,
                                 int is_player,
+                                int status,
                                 const mk_sock_info sender) {
     char ip[64];
     log_printf(LOG_LEV,"%s/%s/%s/%s, url params: %s,"
-              "total_bytes: %d, total_seconds: %d, is_player: %d, peer_ip:%s, peer_port:%d",
+              "total_bytes: %d, total_seconds: %d, is_player: %d, peer_ip:%s, peer_port:%d, status:%d",
                mk_media_info_get_schema(url_info),
                mk_media_info_get_vhost(url_info),
                mk_media_info_get_app(url_info),
@@ -563,7 +564,7 @@ void API_CALL on_mk_flow_report(const mk_media_info url_info,
               (int)total_seconds,
               (int)is_player,
               mk_sock_info_peer_ip(sender,ip),
-              (int)mk_sock_info_peer_port(sender));
+              (int)mk_sock_info_peer_port(sender)), status;
 }
 
 int main(int argc, char *argv[]) {

@@ -82,7 +82,7 @@ HlsCookieData::~HlsCookieData() {
         uint64_t bytes = _bytes.load();
         if (bytes >= iFlowThreshold * 1024) {
             try {
-                NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _info, bytes, duration, true, *_sock_info);
+                NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _info, bytes, duration, true, -1, *_sock_info);
             } catch (std::exception &ex) {
                 WarnL << "Exception occurred: " << ex.what();
             }

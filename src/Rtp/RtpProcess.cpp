@@ -72,7 +72,7 @@ RtpProcess::~RtpProcess() {
     GET_CONFIG(uint32_t, iFlowThreshold, General::kFlowThreshold);
     if (_total_bytes >= iFlowThreshold * 1024) {
         try {
-            NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _total_bytes, duration, false, *this);
+            NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _total_bytes, duration, false, -1, *this);
         } catch (std::exception &ex) {
             WarnL << "Exception occurred: " << ex.what();
         }

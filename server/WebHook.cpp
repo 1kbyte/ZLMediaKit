@@ -406,6 +406,7 @@ void installWebHook() {
         body["totalBytes"] = (Json::UInt64)totalBytes;
         body["duration"] = (Json::UInt64)totalDuration;
         body["player"] = isPlayer;
+        body["status"] = status;
         body["ip"] = sender.get_peer_ip();
         body["port"] = sender.get_peer_port();
         body["id"] = sender.getIdentifier();

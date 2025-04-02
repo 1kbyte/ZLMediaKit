@@ -176,8 +176,7 @@ void HttpSession::onError(const SockException &err) {
 
         GET_CONFIG(uint32_t, iFlowThreshold, General::kFlowThreshold);
         if (_total_bytes_usage >= iFlowThreshold * 1024) {
-            int status = -1;
-            NOTICE_EMIT(BroadcastFlowReport1Args, Broadcast::kBroadcastFlowReport, _media_info, _total_bytes_usage, duration, true, status, *this);
+            NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _total_bytes_usage, duration, true, -1, *this);
         }
         return;
     }

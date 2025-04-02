@@ -132,7 +132,7 @@ void WebRtcPusher::onDestory() {
     if (getSession()) {
         WarnL << "RTC推流器(" << _media_info.shortUrl() << ")结束推流,耗时(s):" << duration;
         if (bytes_usage >= iFlowThreshold * 1024) {
-            NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, bytes_usage, duration, false, *getSession());
+            NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, bytes_usage, duration, false, -1, *getSession());
         }
     }
 

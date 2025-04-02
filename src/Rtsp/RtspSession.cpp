@@ -77,10 +77,9 @@ void RtspSession::onError(const SockException &err) {
 
     //流量统计事件广播
     // GET_CONFIG(uint32_t, iFlowThreshold, General::kFlowThreshold);
-    // if (_bytes_usage >= iFlowThreshold * 1024) {
-        int status = -1;
-        NOTICE_EMIT(BroadcastFlowReport1Args, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, duration, is_player, status, *this);
-    // }
+    if (_bytes_usage >= iFlowThreshold * 1024) {
+        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, duration, is_player, -1, *this);
+    }
 
     //如果是主动关闭的，那么不延迟注销
     if (_push_src && _continue_push_ms  && err.getErrCode() != Err_shutdown) {
@@ -128,8 +127,7 @@ void RtspSession::onRecv(const Buffer::Ptr &buf) {
         bool is_player = !_push_src_ownership;
         uint64_t duration = _alive_ticker.createdTime() / 1000;
         _last_bytes_usage = _bytes_usage;
-        int status = 1;
-        NOTICE_EMIT(BroadcastFlowReport1Args, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, duration, is_player, status, *this);
+        NOTICE_EMIT(BroadcastFlowReportArgs, Broadcast::kBroadcastFlowReport, _media_info, _bytes_usage, duration, is_player, 1, *this);
     }
 }
 

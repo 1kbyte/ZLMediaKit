@@ -145,15 +145,7 @@ API_EXPORT void API_CALL mk_events_listen(const mk_events *events){
                                            totalBytes,
                                            totalDuration,
                                            isPlayer,
-                                           (mk_sock_info)&sender);
-            }
-        });
-        NoticeCenter::Instance().addListener(&s_tag,Broadcast::kBroadcastFlowReport,[](BroadcastFlowReport1Args){
-            if (s_events.on_mk_flow_report) {
-                s_events.on_mk_flow_report((mk_media_info) &args,
-                                           totalBytes,
-                                           totalDuration,
-                                           isPlayer,
+                                           status,
                                            (mk_sock_info)&sender);
             }
         });
