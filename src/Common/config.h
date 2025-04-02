@@ -112,6 +112,7 @@ extern const std::string kBroadcastShellLogin;
 // Broadcast for traffic reporting event after stopping rtsp/rtmp/http-flv session
 extern const std::string kBroadcastFlowReport;
 #define BroadcastFlowReportArgs const MediaInfo &args, const uint64_t &totalBytes, const uint64_t &totalDuration, const bool &isPlayer, SockInfo &sender
+#define BroadcastFlowReport1Args const MediaInfo &args, const uint64_t &totalBytes, const uint64_t &totalDuration, const bool &isPlayer, const int &status, SockInfo &sender
 
 // 未找到流后会广播该事件，请在监听该事件后去拉流或其他方式产生流，这样就能按需拉流了  [AUTO-TRANSLATED:0c00171d]
 // This event will be broadcast after the stream is not found. Please pull the stream or other methods to generate the stream after listening to this event, so that you can pull the stream on demand.
