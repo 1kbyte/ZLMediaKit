@@ -162,6 +162,42 @@ private:
     toolkit::ResourcePool<FFmpegFrame> _sws_frame_pool;
 };
 
+class FFmpegEncoder : public TaskManager, public CodecInfo {
+public:
+    using Ptr = std::shared_ptr<FFmpegEncoder>;
+    using onEnc = std::function<void(const Frame::Ptr &)>;
+
+    FFmpegEncoder(const Track::Ptr &track, int thread_num = 2);
+    ~FFmpegEncoder() override;
+
+    void flush();
+    CodecId getCodecId() const override { return _codecId; }
+    const AVCodecContext *getContext() const { return _context.get(); }
+
+    void setOnEncode(onEnc cb) { _cb = std::move(cb); }
+    bool inputFrame(const FFmpegFrame::Ptr &frame, bool async);
+
+private:
+    bool inputFrame_l(FFmpegFrame::Ptr frame);
+    bool encodeFrame(AVFrame *frame);
+    void onEncode(AVPacket *packet);
+    bool openVideoCodec(int width, int height, int bitrate, const AVCodec *codec);
+    bool openAudioCodec(int samplerate, int channel, int bitrate, const AVCodec *codec);
+
+private:
+    onEnc _cb;
+    CodecId _codecId;
+    const AVCodec *_codec = nullptr;
+    AVDictionary *_dict = nullptr;
+    std::shared_ptr<AVCodecContext> _context;
+
+    std::unique_ptr<FFmpegSws> _sws;
+    std::unique_ptr<FFmpegSwr> _swr;
+    std::unique_ptr<FFmpegAudioFifo> _fifo;
+    bool var_frame_size = false;
+};
+
+
 class FFmpegUtils {
 public:
     /**
