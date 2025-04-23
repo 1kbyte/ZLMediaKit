@@ -561,6 +561,9 @@ extern const std::string kGopCache;
 // 最好为20 的倍数，程序自动向20的倍数取整  [AUTO-TRANSLATED:7bc6e0ec]
 // It is best to be a multiple of 20, the program automatically rounds to the nearest multiple of 20
 extern const std::string kRtpG711DurMs;
+// 是否将G711音频转换为Opus格式  [AUTO-TRANSLATED:9f91f85b]
+// Whether to convert G711 audio to Opus format
+extern const std::string kConvertG711ToOpus;
 // udp recv socket buffer size
 extern const std::string kUdpRecvSocketBuffer;
 } // namespace RtpProxy

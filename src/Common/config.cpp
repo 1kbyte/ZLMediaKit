@@ -365,6 +365,7 @@ const string kPSPT = RTP_PROXY_FIELD "ps_pt";
 const string kOpusPT = RTP_PROXY_FIELD "opus_pt";
 const string kGopCache = RTP_PROXY_FIELD "gop_cache";
 const string kRtpG711DurMs = RTP_PROXY_FIELD "rtp_g711_dur_ms";
+const string kConvertG711ToOpus = RTP_PROXY_FIELD "convert_g711_to_opus";
 const string kUdpRecvSocketBuffer = RTP_PROXY_FIELD "udp_recv_socket_buffer";
 
 static onceToken token([]() {
@@ -377,6 +378,7 @@ static onceToken token([]() {
     mINI::Instance()[kOpusPT] = 100;
     mINI::Instance()[kGopCache] = 1;
     mINI::Instance()[kRtpG711DurMs] = 100;
+    mINI::Instance()[kConvertG711ToOpus] = false;
     mINI::Instance()[kUdpRecvSocketBuffer] = 4 * 1024 * 1024;
 });
 } // namespace RtpProxy

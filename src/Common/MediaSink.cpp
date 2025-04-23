@@ -11,6 +11,7 @@
 #include "MediaSink.h"
 #include "Common/config.h"
 #include "Extension/Factory.h"
+#include "config.h"
 
 #define MUTE_AUDIO_INDEX 0xFFFF
 
@@ -41,9 +42,33 @@ bool MediaSink::addTrack(const Track::Ptr &track_in) {
         WarnL << "Max track size reached: " << _max_track_size << ", add track ignored:" << track_in->getCodecName();
         return false;
     }
-    // 克隆Track，只拷贝其数据，不拷贝其数据转发关系  [AUTO-TRANSLATED:09edaa31]
-    // Clone Track, only copy its data, not its data forwarding relationship
-    auto track = track_in->clone();
+    
+    // 检查是否需要将G711音频转换为Opus
+    // Check if G711 audio needs to be converted to Opus
+    Track::Ptr track;
+    if (track_in->getTrackType() == TrackAudio && 
+        (track_in->getCodecId() == CodecG711A || track_in->getCodecId() == CodecG711U)) {
+        GET_CONFIG(bool, convert_g711_to_opus, RtpProxy::kConvertG711ToOpus);
+        if (convert_g711_to_opus) {
+            InfoL << "Converting G711 audio to Opus: " << track_in->getCodecName();
+            // 创建Opus轨道
+            // Create Opus track
+            track = std::make_shared<OpusTrack>();
+            // 设置转码器
+            // Set transcoder
+            _g711_to_opus_transcoder = std::make_shared<G711ToOpusTranscoder>(track_in, track);
+            InfoL << "G711 to Opus transcoder created";
+        } else {
+            // 不转换，使用原始G711轨道
+            // No conversion, use original G711 track
+            track = track_in->clone();
+        }
+    } else {
+        // 克隆Track，只拷贝其数据，不拷贝其数据转发关系  [AUTO-TRANSLATED:09edaa31]
+        // Clone Track, only copy its data, not its data forwarding relationship
+        track = track_in->clone();
+    }
+    
     CHECK(track, "Clone track failed: ", track_in->getCodecName());
     auto index = track->getIndex();
     if (!_track_map.emplace(index, std::make_pair(track, false)).second) {
@@ -72,6 +97,17 @@ bool MediaSink::addTrack(const Track::Ptr &track_in) {
         frame_unread.emplace_back(Frame::getCacheAbleFrame(frame));
         return true;
     });
+    
+    // 如果是G711音频并且需要转码为Opus，则设置原始轨道的代理
+    // If it's G711 audio and needs to be transcoded to Opus, set up the delegate for the original track
+    if (_g711_to_opus_transcoder) {
+        track_in->addDelegate([this](const Frame::Ptr &frame) {
+            // 将G711帧转码为Opus帧
+            // Transcode G711 frame to Opus frame
+            return _g711_to_opus_transcoder->inputFrame(frame);
+        });
+    }
+    
     return true;
 }
 

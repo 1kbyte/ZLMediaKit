@@ -16,6 +16,9 @@
 #include "Util/TimeTicker.h"
 #include "Extension/Frame.h"
 #include "Extension/Track.h"
+#include "ext-codec/Opus.h"
+#include "ext-codec/G711.h"
+#include "G711ToOpusTranscoder.h"
 
 namespace mediakit{
 
@@ -242,6 +245,8 @@ private:
      */
     bool addMuteAudioTrack();
 
+
+
 private:
     bool _audio_add = false;
     bool _have_video = false;
@@ -253,6 +258,7 @@ private:
 
     toolkit::Ticker _ticker;
     MuteAudioMaker::Ptr _mute_audio_maker;
+    G711ToOpusTranscoder::Ptr _g711_to_opus_transcoder;
 
     std::unordered_map<int, toolkit::List<Frame::Ptr> > _frame_unread;
     std::unordered_map<int, std::function<void()> > _track_ready_callback;
