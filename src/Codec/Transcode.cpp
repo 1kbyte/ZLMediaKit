@@ -17,6 +17,7 @@
 #include "Transcode.h"
 #include "Common/config.h"
 #include "Extension/Factory.h"
+#include <cfloat>
 
 #define ADTS_HEADER_LEN 7
 #define MAX_DELAY_SECOND 3
