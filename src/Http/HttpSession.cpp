@@ -17,6 +17,8 @@
 #include "HttpConst.h"
 #include "Util/base64.h"
 #include "Util/SHA1.h"
+#include "Extension/Factory.h"
+#include "Codec/Transcode.h"
 
 using namespace std;
 using namespace toolkit;

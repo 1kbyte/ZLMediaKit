@@ -93,7 +93,7 @@ public:
      */
      void makeConfigPacket();
 
-private:
+protected:
     bool _track_existed[2] = { false, false };
 
     AMFValue _metadata;

@@ -15,6 +15,8 @@
 #include "Rtmp/RtmpMediaSource.h"
 
 namespace mediakit {
+class FFmpegDecoder;
+class FFmpegEncoder;
 
 class RtmpMediaSourceMuxer final : public RtmpMuxer, public MediaSourceEventInterceptor,
                                    public std::enable_shared_from_this<RtmpMediaSourceMuxer> {
@@ -32,6 +34,7 @@ public:
     ~RtmpMediaSourceMuxer() override {
         try {
             RtmpMuxer::flush();
+            resetTracks();
         } catch (std::exception &ex) {
             WarnL << ex.what();
         }
@@ -64,16 +67,17 @@ public:
         MediaSourceEventInterceptor::onReaderChanged(sender, size);
     }
 
-    bool inputFrame(const Frame::Ptr &frame) override {
-        if (_clear_cache && _option.rtmp_demand) {
-            _clear_cache = false;
-            _media_src->clearCache();
-        }
-        if (_enabled || !_option.rtmp_demand) {
-            return RtmpMuxer::inputFrame(frame);
-        }
-        return false;
-    }
+    // bool inputFrame(const Frame::Ptr &frame) override {
+    //     if (_clear_cache && _option.rtmp_demand) {
+    //         _clear_cache = false;
+    //         _media_src->clearCache();
+    //     }
+    //     if (_enabled || !_option.rtmp_demand) {
+    //         return RtmpMuxer::inputFrame(frame);
+    //     }
+    //     return false;
+    // }
+    bool inputFrame(const Frame::Ptr &frame) override;
 
     bool isEnabled() {
         // 缓存尚未清空时，还允许触发inputFrame函数，以便及时清空缓存  [AUTO-TRANSLATED:7cfd4d49]
@@ -86,6 +90,17 @@ private:
     bool _clear_cache = false;
     ProtocolOption _option;
     RtmpMediaSource::Ptr _media_src;
+
+public:
+    bool addTrack(const Track::Ptr & track) override;
+    void resetTracks() override;
+    void onRegist(MediaSource &sender, bool regist) override;
+private:
+    int _count = 0;
+    bool _regist = false;
+    std::shared_ptr<FFmpegDecoder> _audio_dec;
+    std::shared_ptr<FFmpegEncoder> _audio_enc;
+
 };
 
 
