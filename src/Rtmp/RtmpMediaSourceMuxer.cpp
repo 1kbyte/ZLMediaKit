@@ -6,16 +6,16 @@ namespace mediakit {
 
 bool needTransToOpus(CodecId codec) {
     // GET_CONFIG(int, transG711, Rtc::kTranscodeG711);
-    // switch (codec)
-    // {
-    // case CodecG711U:
-    // case CodecG711A:
-    //     return transG711;
-    // case CodecAAC:
-    //     return true;
-    // default:
-    //     return false;
-    // }
+    switch (codec)
+    {
+    case CodecG711U:
+    case CodecG711A:
+        return true;
+    case CodecAAC:
+        return false;
+    default:
+        return false;
+    }
     return true;
 }
 
