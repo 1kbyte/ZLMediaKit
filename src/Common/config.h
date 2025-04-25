@@ -262,6 +262,8 @@ extern const std::string kBroadcastPlayerCountChanged;
 // 绑定的本地网卡ip  [AUTO-TRANSLATED:daa90832]
 // Bound local network card ip
 extern const std::string kListenIP;
+extern const std::string kOpusBitrate;
+extern const std::string kAacBitrate;
 } // namespace General
 
 namespace Protocol {

@@ -16,8 +16,11 @@
 #include "Util/TimeTicker.h"
 #include "Extension/Frame.h"
 #include "Extension/Track.h"
+#include "Codec/Transcode.h"
 
 namespace mediakit{
+class G711Transcoder;
+class G711ToPcmTranscoder;
 
 class TrackListener {
 public:
@@ -253,6 +256,8 @@ private:
 
     toolkit::Ticker _ticker;
     MuteAudioMaker::Ptr _mute_audio_maker;
+    std::shared_ptr<G711Transcoder> _g711_transcoder;
+    std::shared_ptr<G711ToPcmTranscoder> _g711_to_pcm_transcoder;
 
     std::unordered_map<int, toolkit::List<Frame::Ptr> > _frame_unread;
     std::unordered_map<int, std::function<void()> > _track_ready_callback;

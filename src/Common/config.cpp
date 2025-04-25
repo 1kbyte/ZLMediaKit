@@ -88,12 +88,16 @@ const string kWaitAddTrackMS = GENERAL_FIELD "wait_add_track_ms";
 const string kUnreadyFrameCache = GENERAL_FIELD "unready_frame_cache";
 const string kBroadcastPlayerCountChanged = GENERAL_FIELD "broadcast_player_count_changed";
 const string kListenIP = GENERAL_FIELD "listen_ip";
+const string kOpusBitrate = GENERAL_FIELD"opusBitrate";
+const string kAacBitrate = GENERAL_FIELD"aacBitrate";
 
 static onceToken token([]() {
     mINI::Instance()[kFlowThreshold] = 1024;
     mINI::Instance()[kStreamNoneReaderDelayMS] = 20 * 1000;
     mINI::Instance()[kMaxStreamWaitTimeMS] = 15 * 1000;
     mINI::Instance()[kEnableVhost] = 0;
+    mINI::Instance()[kOpusBitrate] = 64000;
+    mINI::Instance()[kAacBitrate] = 64000;
     mINI::Instance()[kResetWhenRePlay] = 1;
     mINI::Instance()[kMergeWriteMS] = 0;
     mINI::Instance()[kMediaServerId] = makeRandStr(16);

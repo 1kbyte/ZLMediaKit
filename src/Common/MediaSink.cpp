@@ -11,6 +11,14 @@
 #include "MediaSink.h"
 #include "Common/config.h"
 #include "Extension/Factory.h"
+#include "Codec/Transcode.h"
+#include "Codec/G711ToPcmTranscoder.h"
+#include "ext-codec/Opus.h"
+#include "ext-codec/G711.h"
+#include "ext-codec/AAC.h"
+#include "ext-codec/MP3.h"
+#include "ext-codec/AAC2.h"
+#include "ext-codec/PCM.h"
 
 #define MUTE_AUDIO_INDEX 0xFFFF
 
@@ -41,9 +49,57 @@ bool MediaSink::addTrack(const Track::Ptr &track_in) {
         WarnL << "Max track size reached: " << _max_track_size << ", add track ignored:" << track_in->getCodecName();
         return false;
     }
-    // 克隆Track，只拷贝其数据，不拷贝其数据转发关系  [AUTO-TRANSLATED:09edaa31]
-    // Clone Track, only copy its data, not its data forwarding relationship
-    auto track = track_in->clone();
+    // 检查是否需要将G711音频转换为AAC或PCM
+    // Check if G711 audio needs to be converted to AAC or PCM
+    Track::Ptr track;
+    if (track_in->getTrackType() == TrackAudio &&
+        (track_in->getCodecId() == CodecG711A || track_in->getCodecId() == CodecG711U)) {
+        // 获取音频参数
+        auto audio_track = dynamic_pointer_cast<AudioTrack>(track_in);
+        int sample_rate = audio_track->getAudioSampleRate();
+        int channels = audio_track->getAudioChannel();
+        int sample_bit = audio_track->getAudioSampleBit();
+        
+        // 检查是否需要转换为PCM
+        // GET_CONFIG(bool, convert_g711_to_pcm, General::kConvertG711ToPCM);
+        if (true) {
+            InfoL << "Converting G711 audio to PCM: " << track_in->getCodecName();
+            // 创建PCM轨道
+            track = std::make_shared<PCMTrack>(sample_rate, channels, sample_bit);
+            // 使用智能指针管理G711ToPcmTranscoder
+            _g711_to_pcm_transcoder = std::make_shared<G711ToPcmTranscoder>(track_in, track);
+            InfoL << "G711 to PCM transcoder created";
+        }
+        // 检查是否需要转换为AAC
+        else {
+            // GET_CONFIG(bool, convert_g711_to_aac, RtpProxy::kConvertG711ToAAC);
+            if (false) {
+                InfoL << "Converting G711 audio to AAC: " << track_in->getCodecName();
+                // 创建AAC轨道
+                // Create AAC track
+                track = std::make_shared<AAC2Track>(44100, 2, 16);
+                // 确保轨道是AAC2Track类型，并设置转码参数
+                // Ensure track is AAC2Track type and set transcoding parameters
+                // auto aac2_track = dynamic_pointer_cast<AAC2Track>(track);
+                // if (aac2_track) {
+                //     aac2_track->setTranscodeParams(44100, 2, 16);
+                // }
+                // 使用智能指针管理G711Transcoder
+                // Use smart pointer to manage G711Transcoder
+                _g711_transcoder = std::make_shared<G711Transcoder>(track_in, track);
+                InfoL << "G711 to AAC transcoder created";
+            } else {
+                // 不转换，使用原始G711轨道
+                // No conversion, use original G711 track
+                track = track_in->clone();
+            }
+        }
+    } else {
+        // 克隆Track，只拷贝其数据，不拷贝其数据转发关系  [AUTO-TRANSLATED:09edaa31]
+        // Clone Track, only copy its data, not its data forwarding relationship
+        track = track_in->clone();
+    }
+
     CHECK(track, "Clone track failed: ", track_in->getCodecName());
     auto index = track->getIndex();
     if (!_track_map.emplace(index, std::make_pair(track, false)).second) {
@@ -72,6 +128,22 @@ bool MediaSink::addTrack(const Track::Ptr &track_in) {
         frame_unread.emplace_back(Frame::getCacheAbleFrame(frame));
         return true;
     });
+
+        // 如果是G711音频并且需要转码，则设置原始轨道的代理
+    // If it's G711 audio and needs to be transcoded, set up the delegate for the original track
+    if (_g711_transcoder) {
+        track_in->addDelegate([this](const Frame::Ptr &frame) {
+            // 将G711帧转码为AAC帧
+            // Transcode G711 frame to AAC frame
+            return _g711_transcoder->inputFrame(frame);
+        });
+    } else if (_g711_to_pcm_transcoder) {
+        track_in->addDelegate([this](const Frame::Ptr &frame) {
+            // 将G711帧转码为PCM帧
+            // Transcode G711 frame to PCM frame
+            return _g711_to_pcm_transcoder->inputFrame(frame);
+        });
+    }
     return true;
 }
 
@@ -80,6 +152,8 @@ void MediaSink::resetTracks() {
     _have_video = false;
     _all_track_ready = false;
     _mute_audio_maker = nullptr;
+    _g711_transcoder = nullptr;
+    _g711_to_pcm_transcoder = nullptr;
     _ticker.resetTime();
     _track_map.clear();
     _frame_unread.clear();

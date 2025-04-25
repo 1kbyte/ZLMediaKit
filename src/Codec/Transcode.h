@@ -174,6 +174,111 @@ public:
     static std::tuple<bool, std::string> saveFrame(const FFmpegFrame::Ptr &frame, const char *filename, AVPixelFormat fmt = AV_PIX_FMT_YUVJ420P);
 };
 
+class FFmpegAudioFifo {
+public:
+    FFmpegAudioFifo() = default;
+    ~FFmpegAudioFifo();
+
+    bool Write(const AVFrame *frame);
+    bool Read(AVFrame *frame, int sample_size);
+    int size() const;
+
+private:
+    int _channels = 0;
+    int _samplerate = 0;
+    double _tsp = 0;
+    double _timebase = 0;
+    AVAudioFifo *_fifo = nullptr;
+    AVSampleFormat _format = AV_SAMPLE_FMT_NONE;
+};
+
+class FFmpegEncoder : public TaskManager, public CodecInfo {
+public:
+    using Ptr = std::shared_ptr<FFmpegEncoder>;
+    using onEnc = std::function<void(const Frame::Ptr &)>;
+
+    FFmpegEncoder(const Track::Ptr &track, int thread_num = 2);
+    ~FFmpegEncoder() override;
+
+    void flush();
+    CodecId getCodecId() const override { return _codecId; }
+    const AVCodecContext *getContext() const { return _context.get(); }
+
+    void setOnEncode(onEnc cb) { _cb = std::move(cb); }
+    bool inputFrame(const FFmpegFrame::Ptr &frame, bool async);
+
+private:
+    bool inputFrame_l(FFmpegFrame::Ptr frame);
+    bool encodeFrame(AVFrame *frame);
+    void onEncode(AVPacket *packet);
+    bool openVideoCodec(int width, int height, int bitrate, const AVCodec *codec);
+    bool openAudioCodec(int samplerate, int channel, int bitrate, const AVCodec *codec);
+
+private:
+    onEnc _cb;
+    CodecId _codecId;
+    const AVCodec *_codec = nullptr;
+    AVDictionary *_dict = nullptr;
+    std::shared_ptr<AVCodecContext> _context;
+
+    std::unique_ptr<FFmpegSws> _sws;
+    std::unique_ptr<FFmpegSwr> _swr;
+    std::unique_ptr<FFmpegAudioFifo> _fifo;
+    bool var_frame_size = false;
+};
+
+
+class G711Transcoder : public FrameDispatcher {
+    public:
+        using Ptr = std::shared_ptr<G711Transcoder>;
+    
+        G711Transcoder(const Track::Ptr &g711_track, const Track::Ptr &opus_track) {
+            _g711_track = g711_track;
+            _opus_track = opus_track;
+     #if defined(ENABLE_FFMPEG)
+             // 创建G711解码器
+             // Create G711 decoder
+             _decoder = std::make_shared<FFmpegDecoder>(g711_track);
+             // 创建Opus编码器
+             // Create Opus encoder
+             _encoder = std::make_shared<FFmpegEncoder>(opus_track);
+             // 设置解码回调
+             // Set decode callback
+             _decoder->setOnDecode([this](const FFmpegFrame::Ptr &frame) {
+                 // 将解码后的PCM数据送入Opus编码器
+                 // Send decoded PCM data to Opus encoder
+                 _encoder->inputFrame(frame, true);
+                 return true;
+             });
+             InfoL << "G711ToOpusTranscoder created: " << g711_track->getCodecName() << " -> Opus";
+         #else
+             WarnL << "G711ToOpusTranscoder requires ENABLE_FFMPEG";
+         #endif
+        }
+        ~G711Transcoder() = default;
+    
+        bool inputFrame(const Frame::Ptr &frame) override {
+    #if defined(ENABLE_FFMPEG)
+            if (_decoder && _encoder) {
+                // 将G711帧送入解码器
+                // Send G711 frame to decoder
+                _decoder->inputFrame(frame, true, true, true);
+                return true;
+            }
+    #endif
+            WarnL << "G711ToOpusTranscoder not initialized or FFMPEG not enabled";
+            return false;
+        }
+    private:
+        Track::Ptr _g711_track;
+        Track::Ptr _opus_track;
+    
+    #if defined(ENABLE_FFMPEG)
+        std::shared_ptr<FFmpegDecoder> _decoder;
+        std::shared_ptr<FFmpegEncoder> _encoder;
+    #endif
+    };
+
 }//namespace mediakit
 #endif// ENABLE_FFMPEG
 #endif //ZLMEDIAKIT_TRANSCODE_H

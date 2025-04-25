@@ -17,6 +17,9 @@
 
 namespace mediakit {
 class RtspDemuxer;
+class FFmpegDecoder;
+class FFmpegEncoder;
+
 class RtspMediaSourceImp final : public RtspMediaSource, private TrackListener, public MultiMediaSourceMuxer::Listener  {
 public:
     using Ptr = std::shared_ptr<RtspMediaSourceImp>;
@@ -75,21 +78,20 @@ public:
         return _option;
     }
 
-    /**
-     * _demuxer触发的添加Track事件
-     * _demuxer triggered add Track event
-     
-     * [AUTO-TRANSLATED:80dbcf16]
-     */
-    bool addTrack(const Track::Ptr &track) override {
-        if (_muxer) {
-            if (_muxer->addTrack(track)) {
-                track->addDelegate(_muxer);
-                return true;
-            }
-        }
-        return false;
-    }
+    // /**
+    //  * _demuxer触发的添加Track事件
+    //  * _demuxer triggered add Track event
+    //  * [AUTO-TRANSLATED:80dbcf16]
+    //  */
+    // bool addTrack(const Track::Ptr &track) override {
+    //     if (_muxer) {
+    //         if (_muxer->addTrack(track)) {
+    //             track->addDelegate(_muxer);
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 
     /**
      * _demuxer触发的Track添加完毕事件
@@ -103,11 +105,11 @@ public:
         }
     }
 
-    void resetTracks() override {
-        if (_muxer) {
-            _muxer->resetTracks();
-        }
-    }
+    // void resetTracks() override {
+    //     if (_muxer) {
+    //         _muxer->resetTracks();
+    //     }
+    // }
 
     /**
      * _muxer触发的所有Track就绪的事件
@@ -140,11 +142,21 @@ public:
     }
 
     RtspMediaSource::Ptr clone(const std::string& stream) override;
+    bool addTrack(const Track::Ptr &track) override;
+    void resetTracks() override;
 private:
     bool _all_track_ready = false;
     ProtocolOption _option;
     RtspDemuxer::Ptr _demuxer;
     MultiMediaSourceMuxer::Ptr _muxer;
+#if defined(ENABLE_FFMPEG)
+public:
+    ~RtspMediaSourceImp() override { resetTracks(); }
+private:
+    int _count = 0;
+    std::shared_ptr<FFmpegDecoder> _audio_dec;
+    std::shared_ptr<FFmpegEncoder> _audio_enc;
+#endif
 };
 } /* namespace mediakit */
 

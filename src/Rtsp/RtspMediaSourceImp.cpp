@@ -2,6 +2,32 @@
 #include "RtspDemuxer.h"
 #include "Common/config.h"
 namespace mediakit {
+bool needTransToOpus(CodecId codec) {
+    switch (codec)
+    {
+    case CodecG711U:
+    case CodecG711A:
+        return true;
+    case CodecAAC:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool needTransToAac(CodecId codec) {
+    switch (codec)
+    {
+    case CodecG711U:
+    case CodecG711A:
+        return true;
+    case CodecOpus:
+        return true;
+    default:
+        return false;
+    }
+}
+
 void RtspMediaSource::setSdp(const std::string &sdp) {
     SdpParser sdp_parser(sdp);
     _tracks[TrackVideo] = sdp_parser.getTrack(TrackVideo);
@@ -149,6 +175,63 @@ RtspMediaSource::Ptr RtspMediaSourceImp::clone(const std::string &stream) {
     src_imp->setProtocolOption(getProtocolOption());
     return src_imp;
 }
+
+#if defined(ENABLE_FFMPEG)
+
+bool RtspMediaSourceImp::addTrack(const Track::Ptr &track)
+{
+  if (_muxer) {
+    Track::Ptr newTrack = track;
+    if (_option.audio_transcode && needTransToAac(track->getCodecId())) {
+      newTrack = Factory::getTrackByCodecId(CodecAAC, 44100, std::dynamic_pointer_cast<AudioTrack>(track)->getAudioChannel(), 16);
+      GET_CONFIG(int, bitrate, General::kAacBitrate);
+      newTrack->setBitRate(bitrate);
+      _audio_dec.reset(new FFmpegDecoder(track));
+      _audio_enc.reset(new FFmpegEncoder(newTrack));
+      // hook data to newTack
+      track->addDelegate([this](const Frame::Ptr &frame) -> bool {
+        if (_all_track_ready && 0 == _muxer->totalReaderCount()) {
+          if (_count) {
+            InfoL << "stop transcode with " << _count << " items";
+            _count = 0;
+          }
+          return true;
+        }
+        if (_audio_dec) {
+          if (!_count)
+            InfoL << "start transcode " << frame->getCodecName() << "," << frame->pts() << "->AAC";
+          _count++;
+          _audio_dec->inputFrame(frame, true, false);
+        }
+        return true;
+      });
+      _audio_dec->setOnDecode([this](const FFmpegFrame::Ptr & frame) {
+        _audio_enc->inputFrame(frame, false);
+      });
+      _audio_enc->setOnEncode([newTrack](const Frame::Ptr& frame) {
+        newTrack->inputFrame(frame);
+      });
+    }
+
+    if (_muxer->addTrack(newTrack)) {
+      newTrack->addDelegate(_muxer);
+      return true;
+    }
+  }
+  return false;
+}
+
+
+void RtspMediaSourceImp::resetTracks()
+{
+  _audio_dec = nullptr;
+  _audio_enc = nullptr;
+  if (_count) {
+    InfoL << "stop transcode with " << _count << " items";
+    _count = 0;
+  }
+}
+#endif
 
 }
 

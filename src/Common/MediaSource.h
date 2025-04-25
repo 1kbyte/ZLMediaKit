@@ -263,7 +263,8 @@ public:
     // 是否开启转换为http-fmp4/ws-fmp4  [AUTO-TRANSLATED:8c96e1e4]
     // Whether to enable conversion to http-fmp4/ws-fmp4
     bool enable_fmp4;
-
+    // 是否启用音频转码
+    bool audio_transcode;
     // hls协议是否按需生成，如果hls.segNum配置为0(意味着hls录制)，那么hls将一直生成(不管此开关)  [AUTO-TRANSLATED:4653b411]
     // Whether to generate hls protocol on demand, if hls.segNum is configured to 0 (meaning hls recording), then hls will always be generated (regardless of this switch)
     bool hls_demand;
@@ -324,6 +325,7 @@ public:
         GET_OPT_VALUE(enable_rtmp);
         GET_OPT_VALUE(enable_ts);
         GET_OPT_VALUE(enable_fmp4);
+        GET_OPT_VALUE(audio_transcode);
 
         GET_OPT_VALUE(hls_demand);
         GET_OPT_VALUE(rtsp_demand);
