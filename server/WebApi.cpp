@@ -2188,6 +2188,7 @@ void installWebApi() {
         ver["buildTime"] = BUILD_TIME;
         ver["branchName"] = BRANCH_NAME;
         ver["commitHash"] = COMMIT_HASH;
+        ver["version"] = "v8.0.1.1";
         val["data"] = ver;
         invoker(200, headerOut, val.toStyledString());
     });
