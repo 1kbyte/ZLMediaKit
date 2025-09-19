@@ -150,5 +150,42 @@ RtspMediaSource::Ptr RtspMediaSourceImp::clone(const std::string &stream) {
     return src_imp;
 }
 
+bool RtspMediaSourceImp::addTrack(const Track::Ptr &track)
+{
+    if (_muxer) {
+        if (_muxer->addTrack(track)) {
+            track->addDelegate(_muxer);
+            return true;
+        }
+    }
+    return false;
+}
+
+void RtspMediaSourceImp::addTrackCompleted()
+{
+    if (_muxer) {
+        _muxer->addTrackCompleted();
+    }
+}
+
+void RtspMediaSourceImp::resetTracks()
+{
+    if (_muxer) {
+        _muxer->resetTracks();
+    }
+}
+
+void RtspMediaSourceImp::setListener(const std::weak_ptr<MediaSourceEvent> &listener)
+{
+    if (_muxer) {
+        //_muxer对象不能处理的事件再给listener处理
+        _muxer->setMediaListener(listener);
+    }
+    else {
+        //未创建_muxer对象，事件全部给listener处理
+        MediaSource::setListener(listener);
+    }
+}
+
 }
 

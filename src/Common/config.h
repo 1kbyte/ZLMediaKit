@@ -262,6 +262,8 @@ extern const std::string kBroadcastPlayerCountChanged;
 // 绑定的本地网卡ip  [AUTO-TRANSLATED:daa90832]
 // Bound local network card ip
 extern const std::string kListenIP;
+extern const std::string kOpusBitrate;
+extern const std::string kAacBitrate;
 } // namespace General
 
 namespace Protocol {
@@ -312,6 +314,10 @@ extern const std::string kEnableTS;
 // 是否开启转换为http-fmp4/ws-fmp4  [AUTO-TRANSLATED:8c96e1e4]
 // Whether to enable conversion to HTTP-FMP4/WS-FMP4
 extern const std::string kEnableFMP4;
+//是否开启转换为webrtc
+extern const std::string kEnableRtc;
+//是否开启音频转码
+extern const std::string kAudioTranscode;
 
 // 是否将mp4录制当做观看者  [AUTO-TRANSLATED:ba351230]
 // Whether to treat MP4 recording as a viewer
@@ -329,6 +335,7 @@ extern const std::string kHlsSavePath;
 
 // 按需转协议的开关  [AUTO-TRANSLATED:9f350899]
 // On-demand protocol conversion switch
+extern const std::string kRtcDemand;
 extern const std::string kHlsDemand;
 extern const std::string kRtspDemand;
 extern const std::string kRtmpDemand;

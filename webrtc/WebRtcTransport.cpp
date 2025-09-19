@@ -50,6 +50,9 @@ const string kExternIP = RTC_FIELD "externIP";
 // 设置remb比特率，非0时关闭twcc并开启remb。该设置在rtc推流时有效，可以控制推流画质  [AUTO-TRANSLATED:412801db]
 // Set remb bitrate, when it is not 0, turn off twcc and turn on remb. This setting is valid when rtc pushes the stream, and can control the pushing stream quality
 const string kRembBitRate = RTC_FIELD "rembBitRate";
+// 是否转码G711音频，做到: 出rtc将g711转成aac，入rtc将g711转成opus
+const string kTranscodeG711 = RTC_FIELD "transcodeG711";
+
 // webrtc单端口udp服务器  [AUTO-TRANSLATED:d17271ea]
 // webrtc single-port udp server
 const string kPort = RTC_FIELD "port";
@@ -77,6 +80,7 @@ static onceToken token([]() {
     mINI::Instance()[kMinBitrate] = 0;
 
     mINI::Instance()[kDataChannelEcho] = true;
+    mINI::Instance()[kTranscodeG711] = 0;
 });
 
 } // namespace RTC

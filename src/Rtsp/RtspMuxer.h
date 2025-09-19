@@ -123,6 +123,7 @@ private:
         Stamp stamp;
         uint32_t rtp_stamp { 0 };
         uint64_t ntp_stamp { 0 };
+        uint16_t rtp_seq {0};
         RtpCodec::Ptr encoder;
     };
 
