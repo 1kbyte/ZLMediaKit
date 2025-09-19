@@ -13,16 +13,21 @@
 #include <dlfcn.h>
 #endif
 #include "Util/File.h"
+#include "Util/util.h"
 #include "Util/uv_errno.h"
+#include <float.h>
 #include "Transcode.h"
 #include "Common/config.h"
+#include "Extension/Factory.h"
 
+#define ADTS_HEADER_LEN 7
 #define MAX_DELAY_SECOND 3
 
 using namespace std;
 using namespace toolkit;
 
 namespace mediakit {
+extern int dumpAacConfig(const string &config, size_t length, uint8_t *out, size_t out_size);
 
 static string ffmpeg_err(int errnum) {
     char errbuf[AV_ERROR_MAX_STRING_SIZE];
@@ -500,10 +505,6 @@ void FFmpegDecoder::flush() {
         }
         onDecode(out_frame);
     }
-}
-
-const AVCodecContext *FFmpegDecoder::getContext() const {
-    return _context.get();
 }
 
 bool FFmpegDecoder::inputFrame_l(const Frame::Ptr &frame, bool live, bool enable_merge) {
