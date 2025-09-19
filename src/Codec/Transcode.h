@@ -139,7 +139,7 @@ public:
     bool inputFrame(const Frame::Ptr &frame, bool live, bool async, bool enable_merge = true);
     void setOnDecode(onDec cb);
     void flush();
-    const AVCodecContext *getContext() const { return _context.get(); }
+    const AVCodecContext *getContext() const;
 
 private:
     void onDecode(const FFmpegFrame::Ptr &frame);

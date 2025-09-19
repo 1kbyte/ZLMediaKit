@@ -507,6 +507,9 @@ void FFmpegDecoder::flush() {
     }
 }
 
+const AVCodecContext *FFmpegDecoder::getContext() const {
+    return _context.get();
+}
 bool FFmpegDecoder::inputFrame_l(const Frame::Ptr &frame, bool live, bool enable_merge) {
     if (_do_merger && enable_merge) {
         return _merger.inputFrame(frame, [this, live](uint64_t dts, uint64_t pts, const Buffer::Ptr &buffer, bool have_idr) {
@@ -600,6 +603,11 @@ int FFmpegAudioFifo::size() const {
     return _fifo ? av_audio_fifo_size(_fifo) : 0;
 }
 
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+bool FFmpegAudioFifo::Write(const AVFrame *frame) {
+    return true;
+}
+#else
 bool FFmpegAudioFifo::Write(const AVFrame *frame) {
     _format = (AVSampleFormat)frame->format;
     if (!_fifo) {
@@ -632,7 +640,12 @@ bool FFmpegAudioFifo::Write(const AVFrame *frame) {
     av_audio_fifo_write(_fifo, (void **)frame->data, frame->nb_samples);
     return true;
 }
-
+#endif
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
+    return true;
+}
+#else
 bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
     assert(_fifo);
     int fifo_size = av_audio_fifo_size(_fifo);
@@ -662,7 +675,7 @@ bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
     av_audio_fifo_read(_fifo, (void **)frame->data, sample_size);
     return true;
 }
-
+#endif
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
 FFmpegSwr::FFmpegSwr(AVSampleFormat output, AVChannelLayout *ch_layout, int samplerate) {
@@ -838,6 +851,10 @@ void setupContext(AVCodecContext *_context, int bitrate) {
     _context->bit_rate = bitrate;
 }
 
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+FFmpegEncoder::FFmpegEncoder(const Track::Ptr &track, int thread_num) {
+}
+#else
 FFmpegEncoder::FFmpegEncoder(const Track::Ptr &track, int thread_num) {
     setupFFmpeg();
     const AVCodec *codec = nullptr;
@@ -938,13 +955,21 @@ FFmpegEncoder::FFmpegEncoder(const Track::Ptr &track, int thread_num) {
         throw std::runtime_error(StrPrinter << "打开编码器" << codec->name << "失败:" << ffmpeg_err(ret));
     }
 }
-
+#endif
 FFmpegEncoder::~FFmpegEncoder() {
     stopThread(true);
     flush();
     av_dict_free(&_dict);
 }
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+bool FFmpegEncoder::openVideoCodec(int width, int height, int bitrate, const AVCodec *codec) {
+    return true;
+}
+bool FFmpegEncoder::openAudioCodec(int samplerate, int channel, int bitrate, const AVCodec *codec) {
+    return true;
 
+}
+#else
 bool FFmpegEncoder::openVideoCodec(int width, int height, int bitrate, const AVCodec *codec) {
     _context.reset(avcodec_alloc_context3(codec), [](AVCodecContext *ctx) { avcodec_free_context(&ctx); });
     if (_context) {
@@ -991,7 +1016,7 @@ bool FFmpegEncoder::openAudioCodec(int samplerate, int channel, int bitrate, con
     }
     return false;
 }
-
+#endif
 void FFmpegEncoder::flush() {
     while (true) {
         auto packet = alloc_av_packet();

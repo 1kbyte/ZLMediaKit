@@ -21,9 +21,9 @@ using namespace std;
 using namespace toolkit;
 
 namespace mediakit{
+unsigned const samplingFrequencyTable[16] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0 };
 
 #ifndef ENABLE_MP4
-unsigned const samplingFrequencyTable[16] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0 };
 
 class AdtsHeader {
 public:
