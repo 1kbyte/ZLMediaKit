@@ -603,22 +603,26 @@ int FFmpegAudioFifo::size() const {
     return _fifo ? av_audio_fifo_size(_fifo) : 0;
 }
 
-#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
-bool FFmpegAudioFifo::Write(const AVFrame *frame) {
-    return true;
-}
-#else
+
 bool FFmpegAudioFifo::Write(const AVFrame *frame) {
     _format = (AVSampleFormat)frame->format;
     if (!_fifo) {
-        _fifo = av_audio_fifo_alloc(_format, frame->channels, frame->nb_samples);
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+        int channels = frame->ch_layout.nb_channels;
+#else
+        int channels = frame->channels;
+#endif
+        _fifo = av_audio_fifo_alloc(_format, channels, frame->nb_samples);
         if (!_fifo) {
-            WarnL << "av_audio_fifo_alloc " << frame->channels << "x" << frame->nb_samples << "error";
+            WarnL << "av_audio_fifo_alloc " << channels << "x" << frame->nb_samples << "error";
             return false;
         }
     }
-
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+    _channels = frame->ch_layout.nb_channels;
+#else
     _channels = frame->channels;
+#endif
     if (_samplerate != frame->sample_rate) {
         _samplerate = frame->sample_rate;
         // 假定传入frame的时间戳是以ms为单位的
@@ -640,12 +644,8 @@ bool FFmpegAudioFifo::Write(const AVFrame *frame) {
     av_audio_fifo_write(_fifo, (void **)frame->data, frame->nb_samples);
     return true;
 }
-#endif
-#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
-bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
-    return true;
-}
-#else
+
+
 bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
     assert(_fifo);
     int fifo_size = av_audio_fifo_size(_fifo);
@@ -655,7 +655,12 @@ bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
     av_samples_get_buffer_size(frame->linesize, _channels, sample_size, _format, 0);
     frame->nb_samples = sample_size;
     frame->format = _format;
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+    av_channel_layout_default(&frame->ch_layout, _channels);
+#else
     frame->channel_layout = av_get_default_channel_layout(_channels);
+#endif
+    
     frame->sample_rate = _samplerate;
     if (fabs(_tsp) > DBL_EPSILON) {
         frame->pts = _tsp;
@@ -675,7 +680,7 @@ bool FFmpegAudioFifo::Read(AVFrame *frame, int sample_size) {
     av_audio_fifo_read(_fifo, (void **)frame->data, sample_size);
     return true;
 }
-#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
 FFmpegSwr::FFmpegSwr(AVSampleFormat output, AVChannelLayout *ch_layout, int samplerate) {
@@ -851,10 +856,7 @@ void setupContext(AVCodecContext *_context, int bitrate) {
     _context->bit_rate = bitrate;
 }
 
-#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
-FFmpegEncoder::FFmpegEncoder(const Track::Ptr &track, int thread_num) {
-}
-#else
+
 FFmpegEncoder::FFmpegEncoder(const Track::Ptr &track, int thread_num) {
     setupFFmpeg();
     const AVCodec *codec = nullptr;
@@ -955,21 +957,13 @@ FFmpegEncoder::FFmpegEncoder(const Track::Ptr &track, int thread_num) {
         throw std::runtime_error(StrPrinter << "打开编码器" << codec->name << "失败:" << ffmpeg_err(ret));
     }
 }
-#endif
+
 FFmpegEncoder::~FFmpegEncoder() {
     stopThread(true);
     flush();
     av_dict_free(&_dict);
 }
-#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
-bool FFmpegEncoder::openVideoCodec(int width, int height, int bitrate, const AVCodec *codec) {
-    return true;
-}
-bool FFmpegEncoder::openAudioCodec(int samplerate, int channel, int bitrate, const AVCodec *codec) {
-    return true;
 
-}
-#else
 bool FFmpegEncoder::openVideoCodec(int width, int height, int bitrate, const AVCodec *codec) {
     _context.reset(avcodec_alloc_context3(codec), [](AVCodecContext *ctx) { avcodec_free_context(&ctx); });
     if (_context) {
@@ -996,27 +990,71 @@ bool FFmpegEncoder::openVideoCodec(int width, int height, int bitrate, const AVC
 bool FFmpegEncoder::openAudioCodec(int samplerate, int channel, int bitrate, const AVCodec *codec) {
     _context.reset(avcodec_alloc_context3(codec), [](AVCodecContext *ctx) { avcodec_free_context(&ctx); });
 
-    if (_context) {
-        setupContext(_context.get(), bitrate);
-
-        _context->sample_fmt = codec->sample_fmts[0];
-        _context->sample_rate = samplerate;
-        _context->channels = channel;
-        _context->channel_layout = av_get_default_channel_layout(_context->channels);
-
-        if (getCodecId() == CodecOpus)
-            _context->compression_level = 1;
-
-        //_sample_bytes = av_get_bytes_per_sample(_context->sample_fmt) * _context->channels;
-        _swr.reset(
-            new FFmpegSwr(_context->sample_fmt, _context->channels, _context->channel_layout, _context->sample_rate));
-
-        InfoL << "openAudioCodec " << codec->name << " " << _context->sample_rate << "x" << _context->channels;
-        return avcodec_open2(_context.get(), codec, &_dict) >= 0;
+    if (!_context) {
+        WarnL << "Failed to allocate codec context";
+        return false;
     }
-    return false;
-}
+
+    setupContext(_context.get(), bitrate);
+
+    // 👇【兼容处理】采样格式：优先使用编码器支持的第一个，否则回退到默认或带警告
+    if (codec->sample_fmts && codec->sample_fmts[0] != AV_SAMPLE_FMT_NONE) {
+        _context->sample_fmt = codec->sample_fmts[0];
+    } else {
+        // 回退方案：根据编码器类型选择常见格式
+        if (getCodecId() == CodecOpus) {
+            _context->sample_fmt = AV_SAMPLE_FMT_FLTP; // Opus 推荐
+        } else {
+            _context->sample_fmt = AV_SAMPLE_FMT_S16; // 通用 fallback
+        }
+        WarnL << "Codec " << codec->name << " has no sample_fmts, using fallback: " << av_get_sample_fmt_name(_context->sample_fmt);
+    }
+
+    _context->sample_rate = samplerate;
+
+    // 👇【兼容处理】声道布局：FFmpeg 5.1+ 使用 AVChannelLayout，旧版用 uint64_t channel_layout
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1 // 大致对应 FFmpeg 5.1+
+    av_channel_layout_default(&_context->ch_layout, channel);
+    if (_context->ch_layout.nb_channels != channel) {
+        WarnL << "Failed to set channel layout for " << channel << " channels";
+        return false;
+    }
+#else
+    _context->channels = channel;
+    _context->channel_layout = av_get_default_channel_layout(channel);
+    if (_context->channel_layout == 0) {
+        WarnL << "Failed to get default channel layout for " << channel << " channels";
+        return false;
+    }
 #endif
+
+    if (getCodecId() == CodecOpus) {
+        _context->compression_level = 1;
+    }
+
+    // 初始化重采样器（假设你的 FFmpegSwr 已兼容新旧版本）
+    _swr.reset(new FFmpegSwr(
+#if LIBAVCODEC_VERSION_INT >= FF_CODEC_VER_7_1
+        _context->sample_fmt, &_context->ch_layout, _context->sample_rate
+#else
+        _context->sample_fmt, _context->channels, _context->channel_layout, _context->sample_rate
+#endif
+        ));
+
+    InfoL << "openAudioCodec " << codec->name << " " << _context->sample_rate << "Hz"
+          << "x" << channel << "ch";
+
+    int ret = avcodec_open2(_context.get(), codec, &_dict);
+    if (ret < 0) {
+        char errbuf[AV_ERROR_MAX_STRING_SIZE];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        WarnL << "avcodec_open2 failed: " << errbuf;
+        return false;
+    }
+
+    return true;
+}
+
 void FFmpegEncoder::flush() {
     while (true) {
         auto packet = alloc_av_packet();

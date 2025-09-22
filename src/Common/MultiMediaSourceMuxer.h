@@ -23,7 +23,14 @@
 #include "TS/TSMediaSourceMuxer.h"
 #include "FMP4/FMP4MediaSourceMuxer.h"
 
+#include "Codec/Transcode.h"
+
 namespace mediakit {
+
+class FFmpegDecoder;
+class FFmpegEncoder;
+bool needTransToOpus(CodecId codec);
+bool needTransToAac(CodecId codec);
 
 class MultiMediaSourceMuxer : public MediaSourceEventInterceptor, public MediaSink, public std::enable_shared_from_this<MultiMediaSourceMuxer>{
 public:
@@ -35,6 +42,12 @@ public:
         virtual ~Listener() = default;
         virtual void onAllTrackReady() = 0;
     };
+
+    /** For AAC Transcode */
+    bool addTrack(const Track::Ptr & track) override;
+    bool inputFrame(const Frame::Ptr &frame) override;
+    void onRegist(MediaSource &sender, bool regist) override;
+    /** For AAC Transcode */
 
     MultiMediaSourceMuxer(const MediaTuple& tuple, float dur_sec = 0.0,const ProtocolOption &option = ProtocolOption());
 
@@ -272,6 +285,12 @@ private:
     HlsFMP4Recorder::Ptr _hls_fmp4;
     toolkit::EventPoller::Ptr _poller;
     RingType::Ptr _ring;
+
+
+    std::shared_ptr<FFmpegDecoder> _audio_dec;
+    std::shared_ptr<FFmpegEncoder> _audio_enc;
+    int _count = 0;
+    bool _regist = false;
 
     // 对象个数统计  [AUTO-TRANSLATED:3b43e8c2]
     // Object count statistics
