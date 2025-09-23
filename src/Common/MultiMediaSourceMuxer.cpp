@@ -23,20 +23,20 @@ namespace toolkit {
 }
 
 namespace mediakit {
-bool needTransToOpus(CodecId codec) {
-//   GET_CONFIG(int, transG711, Rtc::kTranscodeG711);
-  switch (codec)
-  {
-  case CodecG711U:
-  case CodecG711A:
-    //   return transG711;
-    return true;
-  case CodecAAC:
-      return true;
-  default:
-      return false;
-  }
-}
+//bool needTransToOpus(CodecId codec) {
+////   GET_CONFIG(int, transG711, Rtc::kTranscodeG711);
+//  switch (codec)
+//  {
+//  case CodecG711U:
+//  case CodecG711A:
+//    //   return transG711;
+//    return true;
+//  case CodecAAC:
+//      return true;
+//  default:
+//      return false;
+//  }
+//}
 
 bool needTransToAac(CodecId codec) {
     // GET_CONFIG(int, transG711, Rtc::kTranscodeG711);
@@ -166,30 +166,6 @@ private:
     std::multimap<uint64_t, Frame::Ptr> _cache;
 };
 
-// bool MultiMediaSourceMuxer::addTrack(const Track::Ptr &track) {
-//     if (!track) {
-//         return false;
-//     }
-//     auto track_id = track->getTrackId();
-//     if (_track_map.find(track_id) != _track_map.end()) {
-//         WarnL << "Track already exists:" << track->getCodecName() << " " << track->getTrackId();
-//         return false;
-//     }
-// }
-
-
-// void MultiMediaSourceMuxer::addTrackCompleted() {
-//     if (_is_muxer_started) {
-//         return;
-//     }
-//     _is_muxer_started = true;
-//     _track_map.clear();
-//     _track_map.reserve(getTracks().size());
-//     for (auto &track : getTracks()) {
-//         _track_map[track->getTrackId()] = track;
-//     }
-// }
-
 bool MultiMediaSourceMuxer::addTrack(const Track::Ptr & track) {
     Track::Ptr newTrack = track;
     if (_option.audio_transcode && needTransToAac(track->getCodecId())) {
@@ -203,16 +179,14 @@ bool MultiMediaSourceMuxer::addTrack(const Track::Ptr & track) {
       _audio_dec->setOnDecode([this](const FFmpegFrame::Ptr & frame) {
         _audio_enc->inputFrame(frame, false);
       });
-      _audio_enc->setOnEncode([newTrack](const Frame::Ptr& frame) {
-        newTrack->inputFrame(frame);
+      _audio_enc->setOnEncode([this, newTrack](const Frame::Ptr &frame) {
+         newTrack->inputFrame(frame);
+          // 将编码后的帧输入到 MediaSink 中，使客户端能够接收到 AAC 音频
+          MediaSink::inputFrame(frame);
       });
     }
 
-    // if (_muxer->addTrack(newTrack)) {
-    //   newTrack->addDelegate(_muxer);
-    //   return true;
-    // }
-    return MediaSink::addTrack(track);
+    return MediaSink::addTrack(newTrack);
 }
 
 void MultiMediaSourceMuxer::onRegist(MediaSource &sender, bool regist) {
@@ -220,7 +194,7 @@ void MultiMediaSourceMuxer::onRegist(MediaSource &sender, bool regist) {
     _regist = regist;
 }
 bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
-    if (_option.audio_transcode && needTransToOpus(frame->getCodecId())) {
+    if (_option.audio_transcode && needTransToAac(frame->getCodecId())) {
       if (!_audio_dec) { // addTrack可能没调, 这边根据情况再调一次
         Track::Ptr track;
         switch (frame->getCodecId())
@@ -230,6 +204,9 @@ bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
           break;
         case CodecG711A:
         case CodecG711U:
+          track = Factory::getTrackByCodecId(frame->getCodecId());
+          break;
+        case CodecOpus:
           track = Factory::getTrackByCodecId(frame->getCodecId());
           break;
         default:
@@ -242,10 +219,9 @@ bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
       if (totalReaderCount() || !_regist) {
         _audio_dec->inputFrame(frame, true, false);
         if (!_count)
-          InfoL << "start transcode " << frame->getCodecName() << "," << frame->pts() << "->Opus";
+          InfoL << "start transcode " << frame->getCodecName() << "," << frame->pts() << "->AAC";
         _count++;
-      }
-      else if (_count) {
+      } else if (_count) {
         InfoL << "stop transcode with " << _count << " items";
         _count = 0;
       }
