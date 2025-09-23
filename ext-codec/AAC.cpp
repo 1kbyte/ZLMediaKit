@@ -283,7 +283,8 @@ CodecId AACTrack::getCodecId() const {
 }
 
 bool AACTrack::ready() const {
-    return !_cfg.empty();
+    auto r = !_cfg.empty();
+    return r;
 }
 
 int AACTrack::getAudioSampleRate() const {

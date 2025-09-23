@@ -23,6 +23,9 @@
 #include "Common/MultiMediaSourceMuxer.h"
 
 namespace mediakit {
+// class FFmpegDecoder;
+// class FFmpegEncoder;
+
 
 class RtmpMediaSourceImp final : public RtmpMediaSource, private TrackListener, public MultiMediaSourceMuxer::Listener {
 public:
@@ -125,6 +128,10 @@ private:
     RtmpDemuxer::Ptr _demuxer;
     MultiMediaSourceMuxer::Ptr _muxer;
 
+    // int _count = 0;
+    // bool _regist = false;
+    // std::shared_ptr<FFmpegDecoder> _audio_dec;
+    // std::shared_ptr<FFmpegEncoder> _audio_enc;
 };
 } /* namespace mediakit */
 

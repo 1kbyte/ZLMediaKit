@@ -184,14 +184,12 @@ bool MultiMediaSourceMuxer::addTrack(const Track::Ptr & track) {
           // 将编码后的帧输入到 MediaSink 中，使客户端能够接收到 AAC 音频
           MediaSink::inputFrame(frame);
       });
+    //   MediaSink::addTrack(newTrack);
+    //   MediaSink::onTrackReady(newTrack);
+    //   return true;
     }
 
     return MediaSink::addTrack(newTrack);
-}
-
-void MultiMediaSourceMuxer::onRegist(MediaSource &sender, bool regist) {
-    MediaSourceEventInterceptor::onRegist(sender, regist);
-    _regist = regist;
 }
 bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
     if (_option.audio_transcode && needTransToAac(frame->getCodecId())) {
@@ -228,6 +226,10 @@ bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
       return true;
     }
     return MediaSink::inputFrame(frame);
+}
+void MultiMediaSourceMuxer::onRegist(MediaSource &sender, bool regist) {
+    MediaSourceEventInterceptor::onRegist(sender, regist);
+    _regist = regist;
 }
 
 
