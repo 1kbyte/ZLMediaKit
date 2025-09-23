@@ -214,15 +214,7 @@ bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
           addTrack(track);
         if (!_audio_dec) return false;
       }
-      if (totalReaderCount() || !_regist) {
-        _audio_dec->inputFrame(frame, true, false);
-        if (!_count)
-          InfoL << "start transcode " << frame->getCodecName() << "," << frame->pts() << "->AAC";
-        _count++;
-      } else if (_count) {
-        InfoL << "stop transcode with " << _count << " items";
-        _count = 0;
-      }
+      _audio_dec->inputFrame(frame, true, false);
       return true;
     }
     return MediaSink::inputFrame(frame);
