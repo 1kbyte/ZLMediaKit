@@ -168,6 +168,7 @@ private:
 
 bool MultiMediaSourceMuxer::addTrack(const Track::Ptr & track) {
     Track::Ptr newTrack = track;
+#if defined(ENABLE_FFMPEG)
     if (_option.audio_transcode && needTransToAac(track->getCodecId())) {
       newTrack = Factory::getTrackByCodecId(CodecAAC, 44100, std::dynamic_pointer_cast<AudioTrack>(track)->getAudioChannel(), 16);
       GET_CONFIG(int, bitrate, General::kAacBitrate);
@@ -180,18 +181,15 @@ bool MultiMediaSourceMuxer::addTrack(const Track::Ptr & track) {
         _audio_enc->inputFrame(frame, false);
       });
       _audio_enc->setOnEncode([this, newTrack](const Frame::Ptr &frame) {
-         newTrack->inputFrame(frame);
-          // 将编码后的帧输入到 MediaSink 中，使客户端能够接收到 AAC 音频
-          MediaSink::inputFrame(frame);
+        newTrack->inputFrame(frame);
+        MediaSink::inputFrame(frame);
       });
-    //   MediaSink::addTrack(newTrack);
-    //   MediaSink::onTrackReady(newTrack);
-    //   return true;
     }
-
+#endif
     return MediaSink::addTrack(newTrack);
 }
 bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
+#if defined(ENABLE_FFMPEG)
     if (_option.audio_transcode && needTransToAac(frame->getCodecId())) {
       if (!_audio_dec) { // addTrack可能没调, 这边根据情况再调一次
         Track::Ptr track;
@@ -217,6 +215,7 @@ bool MultiMediaSourceMuxer::inputFrame(const Frame::Ptr &frame) {
       _audio_dec->inputFrame(frame, true, false);
       return true;
     }
+#endif
     return MediaSink::inputFrame(frame);
 }
 void MultiMediaSourceMuxer::onRegist(MediaSource &sender, bool regist) {
