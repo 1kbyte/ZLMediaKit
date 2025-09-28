@@ -814,7 +814,7 @@ int RtspPlayer::getTrackIndexByPT(int pt) const {
     if (_sdp_track.size() == 1) {
         return 0;
     }
-    WarnL << "no such track with pt:" << pt;
+    //WarnL << "no such track with pt:" << pt;
     return -1;
 }
 

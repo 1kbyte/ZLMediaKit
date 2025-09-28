@@ -170,7 +170,7 @@ bool MultiMediaSourceMuxer::addTrack(const Track::Ptr & track) {
     Track::Ptr newTrack = track;
 #if defined(ENABLE_FFMPEG)
     if (_option.audio_transcode && needTransToAac(track->getCodecId())) {
-      newTrack = Factory::getTrackByCodecId(CodecAAC, 44100, std::dynamic_pointer_cast<AudioTrack>(track)->getAudioChannel(), 16);
+      newTrack = Factory::getTrackByCodecId(CodecAAC, 8000, std::dynamic_pointer_cast<AudioTrack>(track)->getAudioChannel(), 16);
       GET_CONFIG(int, bitrate, General::kAacBitrate);
       newTrack->setBitRate(bitrate);
       _audio_dec.reset(new FFmpegDecoder(track));

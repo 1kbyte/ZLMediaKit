@@ -291,7 +291,6 @@ private:
     std::shared_ptr<FFmpegEncoder> _audio_enc;
     int _count = 0;
     bool _regist = false;
-
     // 对象个数统计  [AUTO-TRANSLATED:3b43e8c2]
     // Object count statistics
     toolkit::ObjectStatistic<MultiMediaSourceMuxer> _statistic;
